@@ -1,0 +1,9 @@
+spotify-history.exe
+spotify_history*.csv
+spotify_history*.json
+spotify_partner_history*.csv
+spotify_partner_history*.json
+partner_check.json
+test.txt
+.env
+*.local.json
