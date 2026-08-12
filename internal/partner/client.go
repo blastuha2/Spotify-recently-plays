@@ -88,6 +88,7 @@ func (c *Client) FetchRecents(ctx context.Context, from time.Time, report func(P
 	result := Result{Tracks: make([]Track, 0, 1024)}
 	offset := 0
 	seenOffsets := make(map[int]struct{})
+	groupContexts := make(map[string]sourceContext)
 	for {
 		if _, exists := seenOffsets[offset]; exists {
 			result.StopReason = "Spotify returned a repeated offset"
@@ -108,6 +109,11 @@ func (c *Client) FetchRecents(ctx context.Context, from time.Time, report func(P
 
 		oldest := time.Time{}
 		cutoffReached := false
+		for _, item := range page.Items {
+			if groupID := item.childrenGroupID(); groupID != "" {
+				groupContexts[groupID] = item.sourceContext()
+			}
+		}
 		for index, item := range page.Items {
 			date, dateErr := item.AddedAt.time()
 			if dateErr != nil {
@@ -120,7 +126,16 @@ func (c *Client) FetchRecents(ctx context.Context, from time.Time, report func(P
 				cutoffReached = true
 				continue
 			}
-			track, isTrack, trackErr := item.track(offset + index)
+			source := groupContexts[item.groupID()]
+			activityType := item.activityType()
+			if activityType == "" {
+				activityType = source.ActivityType
+			}
+			if activityType != "" && activityType != "played" {
+				result.SkippedItems++
+				continue
+			}
+			track, isTrack, trackErr := item.track(offset+index, source)
 			if trackErr != nil {
 				return result, trackErr
 			}

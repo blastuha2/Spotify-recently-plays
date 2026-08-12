@@ -17,6 +17,10 @@ func TestPartnerCSV(t *testing.T) {
 		Artist:         "Исполнитель 1; Исполнитель 2",
 		Track:          "Название, трека",
 		Album:          "Альбом",
+		SourceType:     "playlist",
+		SourceName:     "машина",
+		SourceURI:      "spotify:playlist:car",
+		ActivityType:   "played",
 		TrackDuration:  183000,
 		SpotifyTrackID: "abc123",
 		SpotifyURI:     "spotify:track:abc123",
@@ -36,7 +40,7 @@ func TestPartnerCSV(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse CSV: %v", err)
 	}
-	if len(rows) != 2 || len(rows[0]) != 8 || rows[1][0] != "2026-07-31" || rows[1][7] != "1000" {
+	if len(rows) != 2 || len(rows[0]) != 12 || rows[1][0] != "2026-07-31" || rows[1][5] != "машина" || rows[1][11] != "1000" {
 		t.Fatalf("unexpected CSV: %#v", rows)
 	}
 }

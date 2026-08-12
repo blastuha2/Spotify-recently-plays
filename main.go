@@ -208,7 +208,7 @@ func printPartnerSummary(result partner.Result, from time.Time, csvPath, jsonPat
 	}
 
 	summary := stats.CalculatePartner(result.Tracks)
-	fmt.Printf("\nDone.\n\nAPI requests: %d\nAvailable list items: %d\nExported track occurrences: %d\nSkipped non-track/empty items: %d\n",
+	fmt.Printf("\nDone.\n\nAPI requests: %d\nAvailable list items: %d\nExported played track occurrences: %d\nSkipped non-track/empty/non-played items: %d\n",
 		result.APIRequests, result.TotalItems, len(result.Tracks), result.SkippedItems)
 	if len(result.Tracks) > 0 {
 		fmt.Printf("Newest date: %s\nOldest date: %s\n", summary.Last.Format(dateLayout), summary.First.Format(dateLayout))

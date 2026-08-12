@@ -102,6 +102,36 @@ func TestFetchRecentsRateLimitAndEnd(t *testing.T) {
 	}
 }
 
+func TestFetchRecentsAddsPlaylistContextAndFiltersSavedActivity(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		items := []string{
+			playlistJSON("2026-01-10", "68", "played"),
+			trackWithGroupJSON("2026-01-10", "played-track", "Played", "68", "played"),
+			playlistJSON("2026-01-10", "69", "saved"),
+			trackWithGroupJSON("2026-01-10", "saved-track", "Saved", "69", "saved"),
+		}
+		fmt.Fprint(w, responseJSON(0, 4, 4, items))
+	}))
+	defer server.Close()
+
+	client := NewClient("access", "client")
+	client.Endpoint = server.URL
+	result, err := client.FetchRecents(context.Background(), time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), nil)
+	if err != nil {
+		t.Fatalf("FetchRecents: %v", err)
+	}
+	if len(result.Tracks) != 1 {
+		t.Fatalf("got %d tracks, want only the played track", len(result.Tracks))
+	}
+	track := result.Tracks[0]
+	if track.SourceType != "playlist" || track.SourceName != "машина" || track.SourceURI != "spotify:playlist:car" || track.ActivityType != "played" {
+		t.Fatalf("playlist context was not inherited: %#v", track)
+	}
+	if result.SkippedItems != 3 {
+		t.Fatalf("skipped=%d, want 3", result.SkippedItems)
+	}
+}
+
 func TestFetchRecentsUnauthorized(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -153,4 +183,15 @@ func albumJSON(date string) string {
 	parsed, _ := time.Parse("2006-01-02", date)
 	return fmt.Sprintf(`{"addedAt":{"year":%d,"month":%d,"day":%d},"entity":{"_uri":"spotify:album:album","data":{"entityTypeTrait":{"type":"ENTITY_TYPE_ALBUM"}}}}`,
 		parsed.Year(), parsed.Month(), parsed.Day())
+}
+
+func playlistJSON(date, groupID, activity string) string {
+	parsed, _ := time.Parse("2006-01-02", date)
+	return fmt.Sprintf(`{"addedAt":{"year":%d,"month":%d,"day":%d},"entity":{"_uri":"spotify:playlist:car","data":{"entityTypeTrait":{"type":"ENTITY_TYPE_PLAYLIST"},"identityTrait":{"name":"машина"}}},"formatListAttributes":[{"key":"children_group_id","value":%q},{"key":"recent_type_%s","value":""}]}`,
+		parsed.Year(), parsed.Month(), parsed.Day(), groupID, activity)
+}
+
+func trackWithGroupJSON(date, id, name, groupID, activity string) string {
+	base := trackJSON(date, id, name)
+	return strings.TrimSuffix(base, "}") + fmt.Sprintf(`,"formatListAttributes":[{"key":"group_id_%s","value":""},{"key":"recent_type_%s","value":""}]}`, groupID, activity)
 }
